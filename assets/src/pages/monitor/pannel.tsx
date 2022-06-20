@@ -57,7 +57,7 @@ function GrafanaPannel(props: any) {
     url = url.replaceAll('#AID', aid);
   } else {
     // compatiable with the original way to get grafana path
-    url = `${dashboardPath}&var-appname=${appName}&var-env=${env}&var-datasource=${datasource}&var-aid=${aid}&from=now-30m&to=now`;
+    url = `${dashboardPath}?var-appname=${appName}&var-env=${env}&var-datasource=${datasource}&var-aid=${aid}&from=now-30m&to=now`;
   }
   return (
     <div
