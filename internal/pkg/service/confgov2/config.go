@@ -12,6 +12,14 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 
+	"github.com/douyu/jupiter/pkg/xlog"
+	"github.com/go-resty/resty/v2"
+	"github.com/jinzhu/gorm"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/douyu/juno/internal/pkg/service/agent"
 	"github.com/douyu/juno/internal/pkg/service/app"
 	"github.com/douyu/juno/internal/pkg/service/appevent"
@@ -27,13 +35,6 @@ import (
 	"github.com/douyu/juno/pkg/model/db"
 	"github.com/douyu/juno/pkg/model/view"
 	"github.com/douyu/juno/pkg/util"
-	"github.com/douyu/jupiter/pkg/xlog"
-	"github.com/go-resty/resty/v2"
-	"github.com/jinzhu/gorm"
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -868,29 +869,25 @@ func Publish(param view.ReqPublishConfig, c echo.Context) (err error) {
 			}
 		}
 
-		settings, err := system.System.Setting.GetAll()
-		clusterList := view.ClusterList{}
-
-		if err == nil {
-			if _, ok := settings["k8s_cluster"]; ok {
-				if err = json.Unmarshal([]byte(settings["k8s_cluster"]), &clusterList); err == nil {
-
-					for _, instance := range clusterList.List {
-						var cs db.ConfigurationClusterStatus
-						cs.ConfigurationID = configuration.ID
-						cs.ConfigurationPublishID = cp.ID
-						cs.ClusterName = instance.Name
-						cs.Used = 0
-						cs.Synced = 0
-						cs.TakeEffect = 0
-						cs.CreatedAt = time.Now()
-						cs.UpdateAt = time.Now()
-						if sErr := tx.Save(&cs).Error; sErr != nil {
-							tx.Rollback()
-							return sErr
-						}
+		k8sSetting, err := system.System.Setting.Get(view.K8SClusterSettingName)
+		if err == nil && k8sSetting != "" &&
+			k8sSetting != view.SettingFieldConfigs[view.K8SClusterSettingName].Default {
+			clusterList := view.ClusterList{}
+			if err = json.Unmarshal([]byte(k8sSetting), &clusterList); err == nil {
+				for _, instance := range clusterList.List {
+					var cs db.ConfigurationClusterStatus
+					cs.ConfigurationID = configuration.ID
+					cs.ConfigurationPublishID = cp.ID
+					cs.ClusterName = instance.Name
+					cs.Used = 0
+					cs.Synced = 0
+					cs.TakeEffect = 0
+					cs.CreatedAt = time.Now()
+					cs.UpdateAt = time.Now()
+					if sErr := tx.Save(&cs).Error; sErr != nil {
+						tx.Rollback()
+						return sErr
 					}
-
 				}
 			}
 		}

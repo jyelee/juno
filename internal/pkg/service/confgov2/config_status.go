@@ -3,14 +3,16 @@ package confgov2
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/douyu/juno/internal/pkg/service/resource"
-	"github.com/douyu/juno/internal/pkg/service/system"
-	"github.com/douyu/juno/pkg/model/db"
-	"github.com/douyu/juno/pkg/model/view"
+
 	"github.com/douyu/jupiter/pkg/util/xgo"
 	"github.com/douyu/jupiter/pkg/util/xstring"
 	"github.com/douyu/jupiter/pkg/xlog"
 	"github.com/jinzhu/gorm"
+
+	"github.com/douyu/juno/internal/pkg/service/resource"
+	"github.com/douyu/juno/internal/pkg/service/system"
+	"github.com/douyu/juno/pkg/model/db"
+	"github.com/douyu/juno/pkg/model/view"
 )
 
 type ConfigStatusService struct {
@@ -294,6 +296,11 @@ func (r *ConfigStatusService) checkClusterPublish() error {
 		sqlWhere = ""
 		sqlParam = make([]interface{}, 0)
 	)
+	k8sSetting, _ := system.System.Setting.Get(view.K8SClusterSettingName)
+	if k8sSetting == "" ||
+		k8sSetting == view.SettingFieldConfigs[view.K8SClusterSettingName].Default {
+		return nil
+	}
 	for _, v := range r.configList {
 		if r.configStatusMap[v.ID] == ConfigStatusNotPublish {
 			continue
